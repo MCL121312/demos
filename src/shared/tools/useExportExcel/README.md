@@ -1,30 +1,152 @@
-依赖 "xlsx": "^0.18.5"
+# useExportExcel
+
+Excel 导出工具，基于 `xlsx` 库。
+
+## 依赖
+
+```json
+"xlsx": "^0.18.5"
+```
+
+## API
+
+### `useExportExcel()`
+
+创建一个 Excel 导出工具实例。
+
+**返回值：**
+```ts
+{
+  arrayToExcel,      // 主要方法，将数组数据导出到 Excel 文件
+  transformData,     // 根据列配置转换数据
+  createSheet,       // 创建工作表
+  exportToFile       // 导出工作表到文件
+}
+```
+
+## 使用示例
+
+### 基础用法 - 导出数据
 
 ```ts
 import { useExportExcel } from "../../shared/tools/useExportExcel";
 
-const { exportData } = useExportExcel();
+const { arrayToExcel } = useExportExcel();
+
 const users = [
-  {
-    name: "张三",
-    phone: "13800138000"
-  },
-  {
-    name: "李四",
-    phone: "13800138001"
-  },
-  {
-    name: "王五",
-    phone: "13800138002"
-  }
+  { id: 1, name: "张三", age: 25 },
+  { id: 2, name: "李四", age: 30 },
+  { id: 3, name: "王五", age: 28 }
 ];
-function test() {
-  const config = {
-    name: { title: "姓名", width: 15 },
-    phone: { title: "手机号", width: 20 }
-  };
-  exportData(users, config);
-}
-test();
+
+const config = {
+  id: { title: "ID", width: 10 },
+  name: { title: "姓名", width: 15 },
+  age: { title: "年龄", width: 10 }
+};
+
+arrayToExcel(users, config);
+// 导出为 "导出数据.xlsx"
 ```
-config中的 width 不要写单位，这是直接输入到excel的值
+
+### 自定义文件名
+
+通过 `exportToFile` 方法的第二个参数指定文件名：
+
+```ts
+const { arrayToExcel, exportToFile, createSheet, transformData } = useExportExcel();
+
+const users = [
+  { id: 1, name: "张三", age: 25 },
+  { id: 2, name: "李四", age: 30 }
+];
+
+const config = {
+  id: { title: "ID", width: 10 },
+  name: { title: "姓名", width: 15 }
+};
+
+// 方式1: 使用 arrayToExcel（默认文件名为 "导出数据"）
+arrayToExcel(users, config);
+// 导出为 "导出数据.xlsx"
+
+// 方式2: 使用 exportToFile 指定自定义文件名
+const transformed = transformData(users, config);
+const sheet = createSheet(config, transformed);
+exportToFile(sheet, "用户数据");
+// 导出为 "用户数据.xlsx"
+```
+
+### 分步操作
+
+```ts
+const { transformData, createSheet, exportToFile } = useExportExcel();
+
+const users = [
+  { id: 1, name: "张三", age: 25 },
+  { id: 2, name: "李四", age: 30 }
+];
+
+const config = {
+  id: { title: "ID", width: 10 },
+  name: { title: "姓名", width: 15 }
+};
+
+// 1. 转换数据（只保留配置中指定的字段）
+const transformed = transformData(users, config);
+// 结果: [{ id: 1, name: "张三" }, { id: 2, name: "李四" }]
+
+// 2. 创建工作表
+const sheet = createSheet(config, transformed);
+
+// 3. 导出到文件（不指定文件名时默认为 "导出数据"）
+exportToFile(sheet);
+// 导出为 "导出数据.xlsx"
+
+// 或指定自定义文件名
+exportToFile(sheet, "我的数据");
+// 导出为 "我的数据.xlsx"
+```
+
+## 配置说明
+
+### HeadConfig
+
+```ts
+interface HeadConfig {
+  title: string;    // 列标题
+  width?: number;   // 列宽（可选，默认为 10）
+}
+```
+
+**注意：** `width` 不需要写单位，这是直接输入到 Excel 的值。
+
+### 字段过滤
+
+只有在 `config` 中指定的字段才会被导出，其他字段会被过滤掉：
+
+```ts
+const users = [
+  { id: 1, name: "张三", age: 25, email: "zhangsan@example.com" }
+];
+
+const config = {
+  id: { title: "ID" },
+  name: { title: "姓名" }
+  // age 和 email 不会被导出
+};
+
+arrayToExcel(users, config);
+```
+
+### 跳过列
+
+将配置值设为 `undefined` 可以跳过该列：
+
+```ts
+const config = {
+  id: { title: "ID" },
+  name: { title: "姓名" },
+  age: undefined  // 跳过 age 列
+};
+```

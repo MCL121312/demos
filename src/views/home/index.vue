@@ -28,9 +28,9 @@ function loadTestTableData() {
   ];
 }
 
-const { exportData } = useExportExcel();
+const { arrayToExcel } = useExportExcel();
 function exportTable() {
-  exportData(testTableData.value, {
+  arrayToExcel(testTableData.value, {
     name: { title: "姓名", width: 15 },
     phone: { title: "手机号", width: 20 }
   });

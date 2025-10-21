@@ -5,7 +5,7 @@ import Components from "unplugin-vue-components/vite";
 import { ElementPlusResolver } from "unplugin-vue-components/resolvers";
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(()=>({
   plugins: [
     vue(),
     AutoImport({
@@ -18,7 +18,10 @@ export default defineConfig({
       dts: "./src/generated/types/components.d.ts"
     })
   ],
+  test: {
+    environment: "jsdom"
+  },
   server: {
     host: "0.0.0.0"
   }
-});
+}));

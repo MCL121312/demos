@@ -1,27 +1,31 @@
 import { utils, writeFile } from "xlsx";
 
-interface ParsedHeadsConfig {
-  headersFieldMap: Record<string, string>;
-  colWidths: Array<{ wch: number }>;
+declare global {
+  interface ImportMeta {
+    vitest?: boolean;
+  }
+}
+
+interface HeadConfig {
+  title: string;
+  width?: number;
 }
 
 export const useExportExcel = () => {
-  interface HeadConfig {
-    title: string;
-    width?: number;
-  }
-  const exportData = <T extends Record<string, any>>(
+  const transformData = <T extends Record<string, any>>(
     data: T[],
     headsConfig: Partial<Record<keyof T, HeadConfig>>
-  ): void => {
-    const { headersFieldMap, colWidths } = parseHeadsConfig(headsConfig);
-    const transformedData = transformData(data, headsConfig);
-    const sheet = createSheet(headersFieldMap, transformedData, colWidths);
-    exportToFile(sheet);
+  ): Record<string, any>[] => {
+    const keys = Object.keys(headsConfig);
+    return data.map(item =>
+      Object.fromEntries(keys.map(key => [key, item[key]]))
+    );
   };
-  const parseHeadsConfig = <T extends Record<string, any>>(
-    headsConfig: Partial<Record<keyof T, HeadConfig>>
-  ): ParsedHeadsConfig => {
+
+  const createSheet = <T extends Record<string, any>>(
+    headsConfig: Partial<Record<keyof T, HeadConfig>>,
+    transformedData: Record<string, any>[]
+  ): any => {
     const headersFieldMap: Record<string, string> = {};
     const colWidths: Array<{ wch: number }> = [];
 
@@ -32,27 +36,6 @@ export const useExportExcel = () => {
       }
     });
 
-    return { headersFieldMap, colWidths };
-  };
-
-  const transformData = <T extends Record<string, any>>(
-    data: T[],
-    headsConfig: Partial<Record<keyof T, HeadConfig>>
-  ): Record<string, any>[] => {
-    return data.map(item => {
-      const row: Record<string, any> = {};
-      for (const key in headsConfig) {
-        row[key] = item[key];
-      }
-      return row;
-    });
-  };
-
-  const createSheet = (
-    headersFieldMap: Record<string, string>,
-    transformedData: Record<string, any>[],
-    colWidths: Array<{ wch: number }>
-  ): any => {
     const sheet = utils.json_to_sheet([headersFieldMap, ...transformedData], {
       skipHeader: true
     });
@@ -64,13 +47,20 @@ export const useExportExcel = () => {
     return sheet;
   };
 
-  const exportToFile = (sheet: any, fileName: string = "导出数据"): void => {
+  const exportToFile = (sheet: any, fileName?: string): void => {
     const book = utils.book_new();
     utils.book_append_sheet(book, sheet, "sheet");
-    writeFile(book, `${fileName}.xlsx`);
+    writeFile(book, `${fileName||"导出数据"}.xlsx`);
   };
 
-  return {
-    exportData
+  const arrayToExcel = <T extends Record<string, any>>(
+    data: T[],
+    headsConfig: Partial<Record<keyof T, HeadConfig>>
+  ): void => {
+    const transformedData = transformData(data, headsConfig);
+    const sheet = createSheet(headsConfig, transformedData);
+    exportToFile(sheet);
   };
+
+  return {  arrayToExcel, transformData, createSheet, exportToFile };
 };
