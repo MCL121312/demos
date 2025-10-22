@@ -19,10 +19,12 @@ export const useExportExcel = () => {
     headsConfig: Partial<Record<keyof T, HeadConfig>>,
     transformedData: Record<string, any>[]
   ): any => {
+    const keys = Object.keys(headsConfig).filter(key => headsConfig[key as keyof T]);
     const headersFieldMap: Record<string, string> = {};
     const colWidths: Array<{ wch: number }> = [];
 
-    Object.entries(headsConfig).forEach(([key, config]) => {
+    keys.forEach(key => {
+      const config = headsConfig[key as keyof T];
       if (config) {
         headersFieldMap[key] = config.label;
         colWidths.push({ wch: config.width || 10 });

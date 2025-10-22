@@ -7,15 +7,9 @@ defineOptions({
   name: "Home"
 });
 
+
 const { users, loadUsers } = useUsers();
 
-const { dialog, openDialog, closeDialog } = useDialog("选列导出");
-function showColumnsConfig() {
-  if (users.value.length === 0 || users.value[0] === undefined) return;
-
-  initCheckedColumns();
-  openDialog();
-}
 
 const COLUMN_CONFIG = {
   id: { label: "ID", width: 10, exportable: false },
@@ -23,7 +17,10 @@ const COLUMN_CONFIG = {
   phone: { label: "手机号", width: 15, exportable: true }
 } as const;
 
+
 const { tableColumnInfo, exportTable } = useTableExport(COLUMN_CONFIG);
+const { dialog, openDialog, closeDialog } = useDialog("选列导出");
+
 
 const checkedColumns = ref<
   { field: string; columnsName: string; checked: boolean }[]
@@ -35,32 +32,21 @@ function initCheckedColumns() {
     checkedColumns.value = [];
     return;
   }
-  // 根据 exportable 属性初始化选中状态
   checkedColumns.value = Object.keys(users.value[0]!).map(key => ({
     field: key,
     columnsName: tableColumnInfo.value[key] || key,
-    checked: COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable ?? true
+    checked:
+      COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable ?? true
   }));
 }
 
-function handleExport() {
 
-  const selectedFields = checkedColumns.value.reduce<string[]>((acc, col) => {
-    if (col.checked) {
-      acc.push(col.field);
-    }
-    return acc;
-  }, []);
-
-  // 只导出选中的列
-  const filteredData = users.value.map(user =>
-    Object.fromEntries(
-      selectedFields.map(field => [field, user[field as keyof typeof user]])
-    )
-  );
-
-  exportTable(filteredData, "用户列表");
+function showColumnsConfig() {
+  if (users.value.length === 0 || users.value[0] === undefined) return;
+  initCheckedColumns();
+  openDialog();
 }
+
 
 function changeExportColumn(column: {
   field: string;
@@ -70,19 +56,59 @@ function changeExportColumn(column: {
   column.checked = !column.checked;
 }
 
+// 是否有选中的列
 const canExport = computed(() => {
-  return checkedColumns.value.reduce((hasChecked, col) => hasChecked || col.checked, false);
+  return checkedColumns.value.reduce(
+    (hasChecked, col) => hasChecked || col.checked,
+    false
+  );
 });
+
+
+// 直接导出所有可导出的列
+function handleViewColumnsExport() {
+  const selectedFields = Object.keys(COLUMN_CONFIG).filter(
+    key =>
+      COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable !== false
+  );
+
+  const filteredData = users.value.map(user =>
+    Object.fromEntries(
+      selectedFields.map(field => [field, user[field as keyof typeof user]])
+    )
+  );
+
+  exportTable(filteredData, "用户列表");
+}
+
+// 选列导出
+function handleSelectColumnsExport() {
+  const selectedFields = checkedColumns.value.reduce<string[]>((acc, col) => {
+    if (col.checked) {
+      acc.push(col.field);
+    }
+    return acc;
+  }, []);
+
+  const filteredData = users.value.map(user =>
+    Object.fromEntries(
+      selectedFields.map(field => [field, user[field as keyof typeof user]])
+    )
+  );
+
+  exportTable(filteredData, "用户列表");
+  closeDialog();
+}
+
 
 onMounted(() => {
   loadUsers();
 });
 </script>
-
 <template>
   <div class="home">
     <div class="header">
-      <el-button @click="handleExport" :disabled="users.length == 0">
+      <el-button @click="handleViewColumnsExport" :disabled="users.length == 0">
         导出表格
       </el-button>
       <el-button @click="showColumnsConfig" :disabled="users.length == 0">
@@ -105,14 +131,13 @@ onMounted(() => {
       </div>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" @click="handleExport" :disabled="!canExport">
+        <el-button type="primary" @click="handleSelectColumnsExport" :disabled="!canExport">
           导出
         </el-button>
       </template>
     </el-dialog>
   </div>
 </template>
-
 <style scoped>
 .home {
   display: flex;

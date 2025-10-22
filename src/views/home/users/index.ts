@@ -1,5 +1,4 @@
-
- interface User {
+interface User {
     id: number;
     name: string;
     phone: string;
