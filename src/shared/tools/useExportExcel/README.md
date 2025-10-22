@@ -1,6 +1,7 @@
 # useExportExcel
 
 Excel 导出工具，基于 `xlsx` 库。
+为了解决简单的表格导出问题，传入对象数组，调用方法就会自动导出。
 
 ## 依赖
 
@@ -40,9 +41,9 @@ const users = [
 ];
 
 const config = {
-  id: { title: "ID", width: 10 },
-  name: { title: "姓名", width: 15 },
-  age: { title: "年龄", width: 10 }
+  id: { label: "ID", width: 10 },
+  name: { label: "姓名", width: 15 },
+  age: { label: "年龄", width: 10 }
 };
 
 arrayToExcel(users, config);
@@ -62,8 +63,8 @@ const users = [
 ];
 
 const config = {
-  id: { title: "ID", width: 10 },
-  name: { title: "姓名", width: 15 }
+  id: { label: "ID", width: 10 },
+  name: { label: "姓名", width: 15 }
 };
 
 // 方式1: 使用 arrayToExcel（默认文件名为 "导出数据"）
@@ -88,8 +89,8 @@ const users = [
 ];
 
 const config = {
-  id: { title: "ID", width: 10 },
-  name: { title: "姓名", width: 15 }
+  id: { label: "ID", width: 10 },
+  name: { label: "姓名", width: 15 }
 };
 
 // 1. 转换数据（只保留配置中指定的字段）
@@ -114,7 +115,7 @@ exportToFile(sheet, "我的数据");
 
 ```ts
 interface HeadConfig {
-  title: string;    // 列标题
+  label: string;    // 列标题
   width?: number;   // 列宽（可选，默认为 10）
 }
 ```
@@ -131,8 +132,8 @@ const users = [
 ];
 
 const config = {
-  id: { title: "ID" },
-  name: { title: "姓名" }
+  id: { label: "ID" },
+  name: { label: "姓名" }
   // age 和 email 不会被导出
 };
 
@@ -145,8 +146,8 @@ arrayToExcel(users, config);
 
 ```ts
 const config = {
-  id: { title: "ID" },
-  name: { title: "姓名" },
+  id: { label: "ID" },
+  name: { label: "姓名" },
   age: undefined  // 跳过 age 列
 };
 ```

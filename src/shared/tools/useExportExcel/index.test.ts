@@ -41,8 +41,8 @@ describe("useExportExcel", () => {
 
     const headsConfigs = {
       basic: {
-        id: { title: "ID", width: 10 },
-        name: { title: "姓名", width: 15 }
+        id: { label: "ID", width: 10 },
+        name: { label: "姓名", width: 15 }
       }
     };
     it("应该根据列配置 headsConfig 过滤并转换数据", () => {
@@ -78,8 +78,8 @@ describe("useExportExcel", () => {
       vi.mocked(xlsx.utils.json_to_sheet).mockReturnValue(mockSheet);
 
       const headsConfig = {
-        id: { title: "ID", width: 10 },
-        name: { title: "姓名", width: 15 }
+        id: { label: "ID", width: 10 },
+        name: { label: "姓名", width: 15 }
       };
       const transformedData = [
         { id: 1, name: "张三" },
@@ -105,8 +105,8 @@ describe("useExportExcel", () => {
       vi.mocked(xlsx.utils.json_to_sheet).mockReturnValue(mockSheet);
 
       const headsConfig = {
-        id: { title: "ID" },
-        name: { title: "姓名" }
+        id: { label: "ID" },
+        name: { label: "姓名" }
       };
       const transformedData: Record<string, any>[] = [];
 
@@ -124,7 +124,7 @@ describe("useExportExcel", () => {
       vi.mocked(xlsx.utils.json_to_sheet).mockReturnValue(mockSheet);
 
       const headsConfig = {
-        id: { title: "ID" },
+        id: { label: "ID" },
         name: undefined
       };
       const transformedData: Record<string, any>[] = [];
@@ -152,8 +152,8 @@ describe("useExportExcel", () => {
         { id: 2, name: "李四", age: 30 }
       ];
       const headsConfig = {
-        id: { title: "ID", width: 10 },
-        name: { title: "姓名", width: 15 }
+        id: { label: "ID", width: 10 },
+        name: { label: "姓名", width: 15 }
       };
 
       arrayToExcel(data, headsConfig);

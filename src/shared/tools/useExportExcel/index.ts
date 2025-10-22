@@ -1,13 +1,6 @@
 import { utils, writeFile } from "xlsx";
-
-declare global {
-  interface ImportMeta {
-    vitest?: boolean;
-  }
-}
-
 interface HeadConfig {
-  title: string;
+  label: string;
   width?: number;
 }
 
@@ -31,7 +24,7 @@ export const useExportExcel = () => {
 
     Object.entries(headsConfig).forEach(([key, config]) => {
       if (config) {
-        headersFieldMap[key] = config.title;
+        headersFieldMap[key] = config.label;
         colWidths.push({ wch: config.width || 10 });
       }
     });
@@ -50,7 +43,7 @@ export const useExportExcel = () => {
   const exportToFile = (sheet: any, fileName?: string): void => {
     const book = utils.book_new();
     utils.book_append_sheet(book, sheet, "sheet");
-    writeFile(book, `${fileName||"导出数据"}.xlsx`);
+    writeFile(book, `${fileName || "导出数据"}.xlsx`);
   };
 
   const arrayToExcel = <T extends Record<string, any>>(
@@ -62,5 +55,5 @@ export const useExportExcel = () => {
     exportToFile(sheet);
   };
 
-  return {  arrayToExcel, transformData, createSheet, exportToFile };
+  return { arrayToExcel, transformData, createSheet, exportToFile };
 };

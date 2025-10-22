@@ -1,118 +1,97 @@
 <script setup lang="ts">
-import { colProps } from "element-plus";
 import { useDialog } from "../../shared/tools/useDialog";
-import { useExportExcel } from "../../shared/tools/useExportExcel";
+import { useTableExport } from "./useTableExport";
+import { useUsers } from "./users";
 
 defineOptions({
   name: "Home"
 });
 
-interface ViewUser {
-  id: number;
-  name: string;
-  phone: string;
-}
-
-interface TableColumn {
-  field: keyof ViewUser;
-  label: string;
-  width?: number;
-  visible?: boolean;
-}
-
-interface ExportColumn {
-  checked: boolean;
-  columnsName: keyof ViewUser;
-  label: string;
-}
-
-const tableColumnsConfig: TableColumn[] = [
-  { field: "name", label: "姓名", width: 180 },
-  { field: "phone", label: "手机号" }
-];
-const checkedColumns = ref<ExportColumn[]>([]);
-
-const viewUsers = ref<ViewUser[]>([]);
-
-function loadTestTableData() {
-  viewUsers.value = [
-    {
-      id: 1,
-      name: "张三",
-      phone: "13800138000"
-    },
-    {
-      id: 2,
-      name: "李四",
-      phone: "13800138001"
-    },
-    {
-      id: 3,
-      name: "王五",
-      phone: "13800138002"
-    }
-  ];
-}
-
-const { arrayToExcel } = useExportExcel();
-function exportTable() {
-  const exportConfig: Record<string, { title: string; width: number }> = {};
-
-  checkedColumns.value.forEach(col => {
-    // 只导出被勾选的列
-    if (col.checked) {
-      const columnConfig = tableColumnsConfig.find(
-        c => c.field === col.columnsName
-      );
-      if (columnConfig) {
-        exportConfig[col.columnsName] = {
-          title: col.label,
-          width: 15 // 默认宽度
-        };
-      }
-    }
-  });
-
-  arrayToExcel(viewUsers.value, exportConfig);
-}
+const { users, loadUsers } = useUsers();
 
 const { dialog, openDialog, closeDialog } = useDialog("选列导出");
-function showColumns() {
-  if (viewUsers.value.length === 0 || viewUsers.value[0] === undefined) return;
-   
-  
+function showColumnsConfig() {
+  if (users.value.length === 0 || users.value[0] === undefined) return;
+
+  initCheckedColumns();
   openDialog();
 }
-function changeExportColumn(column: ExportColumn) {
+
+const COLUMN_CONFIG = {
+  id: { label: "ID", width: 10, exportable: false },
+  name: { label: "姓名", width: 15, exportable: true },
+  phone: { label: "手机号", width: 15, exportable: true }
+} as const;
+
+const { tableColumnInfo, exportTable } = useTableExport(COLUMN_CONFIG);
+
+const checkedColumns = ref<
+  { field: string; columnsName: string; checked: boolean }[]
+>([]);
+
+// 初始化列选择状态
+function initCheckedColumns() {
+  if (users.value.length < 1) {
+    checkedColumns.value = [];
+    return;
+  }
+  // 根据 exportable 属性初始化选中状态
+  checkedColumns.value = Object.keys(users.value[0]!).map(key => ({
+    field: key,
+    columnsName: tableColumnInfo.value[key] || key,
+    checked: COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable ?? true
+  }));
+}
+
+function handleExport() {
+
+  const selectedFields = checkedColumns.value.reduce<string[]>((acc, col) => {
+    if (col.checked) {
+      acc.push(col.field);
+    }
+    return acc;
+  }, []);
+
+  // 只导出选中的列
+  const filteredData = users.value.map(user =>
+    Object.fromEntries(
+      selectedFields.map(field => [field, user[field as keyof typeof user]])
+    )
+  );
+
+  exportTable(filteredData, "用户列表");
+}
+
+function changeExportColumn(column: {
+  field: string;
+  columnsName: string;
+  checked: boolean;
+}) {
   column.checked = !column.checked;
 }
 
 const canExport = computed(() => {
-  return checkedColumns.value.filter(col => col.checked).length > 0;
+  return checkedColumns.value.reduce((hasChecked, col) => hasChecked || col.checked, false);
 });
 
 onMounted(() => {
-  loadTestTableData();
+  loadUsers();
 });
 </script>
 
 <template>
   <div class="home">
     <div class="header">
-      <el-button @click="exportTable" :disabled="viewUsers.length == 0">
+      <el-button @click="handleExport" :disabled="users.length == 0">
         导出表格
       </el-button>
-      <el-button @click="showColumns" :disabled="viewUsers.length == 0">
+      <el-button @click="showColumnsConfig" :disabled="users.length == 0">
         选列导出
       </el-button>
     </div>
-    <el-table :data="viewUsers" style="width: 100%" height="100%">
-      <el-table-column
-        v-for="col in tableColumnsConfig"
-        :key="col.field"
-        :prop="col.field"
-        :label="col.label"
-        :width="col.width" />
+    <el-table :data="users" style="width: 100%" height="100%">
+      <el-table-column prop="name" label="姓名" width="180" />
+      <el-table-column prop="phone" label="手机号" />
     </el-table>
     <el-dialog v-model="dialog.visible" :title="dialog.title">
       <div class="dialog-container">
@@ -121,13 +100,13 @@ onMounted(() => {
           :key="column.columnsName"
           :model-value="column.checked"
           @change="changeExportColumn(column)">
-          {{ column.label }}
+          {{ column.columnsName }}
         </el-checkbox>
       </div>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" @click="exportTable" :disabled="!canExport">
-          确定
+        <el-button type="primary" @click="handleExport" :disabled="!canExport">
+          导出
         </el-button>
       </template>
     </el-dialog>
@@ -146,8 +125,5 @@ onMounted(() => {
   .header {
     padding: 10px;
   }
- 
 }
-
- 
 </style>
