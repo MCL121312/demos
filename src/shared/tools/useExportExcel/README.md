@@ -115,12 +115,15 @@ exportToFile(sheet, "我的数据");
 
 ```ts
 interface HeadConfig {
-  label: string;    // 列标题
-  width?: number;   // 列宽（可选，默认为 10）
+  label: string;      // 列标题
+  width?: number;     // 列宽（可选，默认为 10）
+  dateFormat?: string; // 时间格式（可选，如 "yyyy-mm-dd hh:mm:ss"）
 }
 ```
 
-**注意：** `width` 不需要写单位，这是直接输入到 Excel 的值。
+**注意：**
+- `width` 不需要写单位，这是直接输入到 Excel 的值。
+- `dateFormat` 用于指定时间字段的显示格式，支持 Excel 的标准格式代码。
 
 ### 字段过滤
 
@@ -151,3 +154,33 @@ const config = {
   age: undefined  // 跳过 age 列
 };
 ```
+
+### 时间格式配置
+
+使用 `dateFormat` 指定时间字段的显示格式：
+
+```ts
+const users = [
+  { id: 1, name: "张三", registerTime: new Date() },
+  { id: 2, name: "李四", registerTime: new Date() }
+];
+
+const config = {
+  id: { label: "ID" },
+  name: { label: "姓名" },
+  registerTime: {
+    label: "注册时间",
+    dateFormat: "yyyy-mm-dd hh:mm:ss"  // 显示年月日时分秒
+  }
+};
+
+arrayToExcel(users, config);
+// 导出的 Excel 中，registerTime 列会显示完整的日期时间
+```
+
+**常用时间格式：**
+- `"yyyy-mm-dd"` - 仅显示年月日
+- `"yyyy-mm-dd hh:mm:ss"` - 显示年月日时分秒
+- `"hh:mm:ss"` - 仅显示时分秒
+- `"mm/dd/yyyy"` - 美式日期格式
+- `"dd/mm/yyyy"` - 欧式日期格式

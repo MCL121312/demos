@@ -5,6 +5,7 @@ interface ColumnConfig {
   label: string;
   width?: number;
   exportable?: boolean;
+  dateFormat?: string; // 时间格式，如 "yyyy-mm-dd hh:mm:ss"
 }
 
 /**
@@ -57,12 +58,13 @@ export const useTableExport = <T extends Record<string, ColumnConfig>>(
         if (config.exportable !== false) {
           acc[key] = {
             label: config.label,
-            width: config.width || 10
+            width: config.width || 10,
+            ...(config.dateFormat && { dateFormat: config.dateFormat })
           };
         }
         return acc;
       },
-      {} as Record<string, { label: string; width: number }>
+      {} as Record<string, { label: string; width: number; dateFormat?: string }>
     )
   );
 

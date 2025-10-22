@@ -43,6 +43,7 @@ interface ColumnConfig {
   label: string;        // 列的显示名称
   width?: number;       // 列宽（可选，默认 10）
   exportable?: boolean; // 是否可导出（可选，默认 true）
+  dateFormat?: string;  // 时间格式（可选，如 "yyyy-mm-dd hh:mm:ss"）
 }
 ```
 
@@ -100,6 +101,25 @@ const COLUMN_CONFIG = {
 } as const;
 
 // exportConfig 只会包含 name 和 email
+```
+
+### 时间格式配置
+
+```ts
+const COLUMN_CONFIG = {
+  id: { label: "ID", width: 10, exportable: false },
+  name: { label: "姓名", width: 15 },
+  registerTime: {
+    label: "注册时间",
+    width: 20,
+    dateFormat: "yyyy-mm-dd hh:mm:ss"  // 显示完整的日期时间
+  }
+} as const;
+
+const { exportTable } = useTableExport(COLUMN_CONFIG);
+
+// 导出时，registerTime 列会按照指定的格式显示
+exportTable(users.value, "用户列表");
 ```
 
 ### 完整示例

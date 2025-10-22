@@ -14,7 +14,8 @@ const { users, loadUsers } = useUsers();
 const COLUMN_CONFIG = {
   id: { label: "ID", width: 10, exportable: false },
   name: { label: "姓名", width: 15, exportable: true },
-  phone: { label: "手机号", width: 15, exportable: true }
+  phone: { label: "手机号", width: 15, exportable: true },
+  registerTime: { label: "注册时间", width: 20, exportable: true, dateFormat: "yyyy-mm-dd hh:mm:ss" }
 } as const;
 
 
