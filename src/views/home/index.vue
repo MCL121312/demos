@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessage } from "element-plus";
 import { useDialog } from "../../shared/tools/useDialog";
 import { useTableExport } from "./useTableExport";
 import { useUsers } from "./users";
@@ -19,7 +20,7 @@ const COLUMN_CONFIG = {
 } as const;
 
 
-const { tableColumnInfo, exportTable } = useTableExport(COLUMN_CONFIG);
+const { exportTableWithFields } = useTableExport(COLUMN_CONFIG);
 const { dialog, openDialog, closeDialog } = useDialog("选列导出");
 
 
@@ -35,7 +36,7 @@ function initCheckedColumns() {
   }
   checkedColumns.value = Object.keys(users.value[0]!).map(key => ({
     field: key,
-    columnsName: tableColumnInfo.value[key] || key,
+    columnsName: COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.label || key,
     checked:
       COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable ?? true
   }));
@@ -67,38 +68,33 @@ const canExport = computed(() => {
 
 
 // 直接导出所有可导出的列
-function handleViewColumnsExport() {
-  const selectedFields = Object.keys(COLUMN_CONFIG).filter(
-    key =>
-      COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable !== false
-  );
+async function handleViewColumnsExport() {
+  try {
+    const selectedFields = Object.keys(COLUMN_CONFIG).filter(
+      key =>
+        COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable !== false
+    );
 
-  const filteredData = users.value.map(user =>
-    Object.fromEntries(
-      selectedFields.map(field => [field, user[field as keyof typeof user]])
-    )
-  );
-
-  exportTable(filteredData, "用户列表");
+    await exportTableWithFields(users.value, selectedFields, "用户列表");
+  } catch (error) {
+    console.error("导出失败：", error);
+    ElMessage.error("导出失败，请稍后重试");
+  }
 }
 
 // 选列导出
-function handleSelectColumnsExport() {
-  const selectedFields = checkedColumns.value.reduce<string[]>((acc, col) => {
-    if (col.checked) {
-      acc.push(col.field);
-    }
-    return acc;
-  }, []);
+async function handleSelectColumnsExport() {
+  try {
+    const selectedFields = checkedColumns.value
+      .filter(col => col.checked)
+      .map(col => col.field);
 
-  const filteredData = users.value.map(user =>
-    Object.fromEntries(
-      selectedFields.map(field => [field, user[field as keyof typeof user]])
-    )
-  );
-
-  exportTable(filteredData, "用户列表");
-  closeDialog();
+    await exportTableWithFields(users.value, selectedFields, "用户列表");
+    closeDialog();
+  } catch (error) {
+    console.error("导出失败：", error);
+    ElMessage.error("导出失败，请稍后重试");
+  }
 }
 
 
@@ -118,7 +114,12 @@ onMounted(() => {
     </div>
     <el-table :data="users" style="width: 100%" height="100%">
       <el-table-column prop="name" label="姓名" width="180" />
-      <el-table-column prop="phone" label="手机号" />
+      <el-table-column prop="phone" label="手机号" width="180"/>
+      <el-table-column prop="registerTime" label="注册时间" >
+        <template #default="scope">
+          {{ scope.row.registerTime.toLocaleString() }}
+        </template>
+      </el-table-column>
     </el-table>
     <el-dialog v-model="dialog.visible" :title="dialog.title">
       <div class="dialog-container">
