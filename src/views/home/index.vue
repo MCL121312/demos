@@ -2,15 +2,13 @@
 import { ElMessage } from "element-plus";
 import { useDialog } from "../../shared/tools/useDialog";
 import { useTableExport } from "./useTableExport";
-import { useUsers } from "./users";
+import { useUsers } from "./useUsers";
 
 defineOptions({
   name: "Home"
 });
 
-
 const { users, loadUsers } = useUsers();
-
 
 const COLUMN_CONFIG = {
   id: { label: "ID", width: 10, exportable: false },
@@ -25,20 +23,15 @@ const { dialog, openDialog, closeDialog } = useDialog("选列导出");
 
 
 const checkedColumns = ref<
-  { field: string; columnsName: string; checked: boolean }[]
+  { field: keyof typeof COLUMN_CONFIG; columnsName: string; checked: boolean }[]
 >([]);
 
 // 初始化列选择状态
 function initCheckedColumns() {
-  if (users.value.length < 1) {
-    checkedColumns.value = [];
-    return;
-  }
-  checkedColumns.value = Object.keys(users.value[0]!).map(key => ({
+  checkedColumns.value = (Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]).map(key => ({
     field: key,
-    columnsName: COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.label || key,
-    checked:
-      COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable ?? true
+    columnsName: COLUMN_CONFIG[key].label,
+    checked: COLUMN_CONFIG[key].exportable ?? true
   }));
 }
 
@@ -51,14 +44,14 @@ function showColumnsConfig() {
 
 
 function changeExportColumn(column: {
-  field: string;
+  field: keyof typeof COLUMN_CONFIG;
   columnsName: string;
   checked: boolean;
 }) {
   column.checked = !column.checked;
 }
 
-// 是否有选中的列
+// 是否能导出，有选中的导出列才能导出
 const canExport = computed(() => {
   return checkedColumns.value.reduce(
     (hasChecked, col) => hasChecked || col.checked,
@@ -70,9 +63,8 @@ const canExport = computed(() => {
 // 直接导出所有可导出的列
 async function handleViewColumnsExport() {
   try {
-    const selectedFields = Object.keys(COLUMN_CONFIG).filter(
-      key =>
-        COLUMN_CONFIG[key as keyof typeof COLUMN_CONFIG]?.exportable !== false
+    const selectedFields = (Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]).filter(
+      key => COLUMN_CONFIG[key].exportable !== false
     );
 
     await exportTableWithFields(users.value, selectedFields, "用户列表");
