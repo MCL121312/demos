@@ -8,40 +8,80 @@ defineOptions({
   name: "Home"
 });
 
-const { users, loadUsers } = useUsers();
+const {
+  users,
+  loadUsers,
+  searchUsers,
+  pagination,
+  changePageNumber,
+  changePageSize,
+  pageSizes
+} = useUsers();
+
+onMounted(() => {
+  loadUsers();
+});
+
+const searchKeyword = ref("");
+
+function handleSearch() {
+  searchUsers(pagination.value, { name: searchKeyword.value });
+}
+
+function handlePageSizeChange(pageSize: number) {
+  changePageSize(pageSize);
+  searchUsers(pagination.value, { name: searchKeyword.value });
+}
+
+function handlePageNumberChange(pageNumber: number) {
+  changePageNumber(pageNumber);
+  searchUsers(pagination.value, { name: searchKeyword.value });
+}
+
+function handleResetSearchConditions() {
+  searchKeyword.value = "";
+  loadUsers();
+}
 
 const COLUMN_CONFIG = {
   id: { label: "ID", width: 10, exportable: false },
   name: { label: "姓名", width: 15, exportable: true },
   phone: { label: "手机号", width: 15, exportable: true },
-  registerTime: { label: "注册时间", width: 20, exportable: true, dateFormat: "yyyy-mm-dd hh:mm:ss" }
+  registerTime: {
+    label: "注册时间",
+    width: 20,
+    exportable: true,
+    dateFormat: "yyyy-mm-dd hh:mm:ss"
+  }
 } as const;
-
 
 const { exportTableWithFields } = useTableExport(COLUMN_CONFIG);
 const { dialog, openDialog, closeDialog } = useDialog("选列导出");
 
+interface CheckedColumn {
+  field: keyof typeof COLUMN_CONFIG;
+  columnsName: string;
+  checked: boolean;
+}
 
-const checkedColumns = ref<
-  { field: keyof typeof COLUMN_CONFIG; columnsName: string; checked: boolean }[]
->([]);
+const checkedColumns = ref<CheckedColumn[]>([]);
 
 // 初始化列选择状态
 function initCheckedColumns() {
-  checkedColumns.value = (Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]).map(key => ({
+  checkedColumns.value = (
+    Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]
+  ).map(key => ({
     field: key,
     columnsName: COLUMN_CONFIG[key].label,
     checked: COLUMN_CONFIG[key].exportable ?? true
   }));
 }
 
-
 function showColumnsConfig() {
   if (users.value.length === 0 || users.value[0] === undefined) return;
   initCheckedColumns();
   openDialog();
 }
-
 
 function changeExportColumn(column: {
   field: keyof typeof COLUMN_CONFIG;
@@ -59,13 +99,12 @@ const canExport = computed(() => {
   );
 });
 
-
 // 直接导出所有可导出的列
 async function handleViewColumnsExport() {
   try {
-    const selectedFields = (Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]).filter(
-      key => COLUMN_CONFIG[key].exportable !== false
-    );
+    const selectedFields = (
+      Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]
+    ).filter(key => COLUMN_CONFIG[key].exportable !== false);
 
     await exportTableWithFields(users.value, selectedFields, "用户列表");
   } catch (error) {
@@ -89,7 +128,6 @@ async function handleSelectColumnsExport() {
   }
 }
 
-
 onMounted(() => {
   loadUsers();
 });
@@ -97,22 +135,57 @@ onMounted(() => {
 <template>
   <div class="home">
     <div class="header">
-      <el-button @click="handleViewColumnsExport" :disabled="users.length == 0">
+      <div class="header__search">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索"
+          v-on:keydown.enter="handleSearch"
+          clearable
+          @clear="handleResetSearchConditions"
+          style="width: 200px;"
+          />
+    
+      </div>
+    <div class="header__table-actions">
+        <el-button @click="handleViewColumnsExport" :disabled="users.length == 0">
         导出表格
       </el-button>
       <el-button @click="showColumnsConfig" :disabled="users.length == 0">
         选列导出
       </el-button>
     </div>
-    <el-table :data="users" style="width: 100%" height="100%">
+    </div>
+
+    <el-table :data="users" class="users-table">
       <el-table-column prop="name" label="姓名" width="180" />
-      <el-table-column prop="phone" label="手机号" width="180"/>
-      <el-table-column prop="registerTime" label="注册时间" >
+      <el-table-column prop="phone" label="手机号" width="180" />
+      <el-table-column prop="registerTime" label="注册时间">
         <template #default="scope">
-          {{ scope.row.registerTime.toLocaleString() }}
+          {{ scope.row.registerTime.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }) }}
         </template>
       </el-table-column>
     </el-table>
+
+    <!-- </div> -->
+
+    <div class="pagination">
+      <el-pagination
+        v-model:current-page="pagination.pageNumber"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="pageSizes"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="pagination.total"
+        @size-change="handlePageSizeChange"
+        @current-change="handlePageNumberChange" />
+    </div>
     <el-dialog v-model="dialog.visible" :title="dialog.title">
       <div class="dialog-container">
         <el-checkbox
@@ -125,7 +198,10 @@ onMounted(() => {
       </div>
       <template #footer>
         <el-button @click="closeDialog">取消</el-button>
-        <el-button type="primary" @click="handleSelectColumnsExport" :disabled="!canExport">
+        <el-button
+          type="primary"
+          @click="handleSelectColumnsExport"
+          :disabled="!canExport">
           导出
         </el-button>
       </template>
@@ -134,15 +210,45 @@ onMounted(() => {
 </template>
 <style scoped>
 .home {
-  display: flex;
-  flex-direction: column;
   width: 100%;
   height: 100%;
-  justify-content: center;
-  gap: 10px;
+  display: grid;
+  grid-template-rows: 50px 1fr 50px;
+  grid-template-areas:
+    "header"
+    "main"
+    "pagination";
+  box-sizing: border-box;
+  padding: 8px;
 
   .header {
-    padding: 10px;
+    grid-area: header;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    gap: 10px;
+    background-color: bisque; 
+    border-radius: 4px;
+     
+  }
+
+  .users-table {
+    grid-area: main;
+    height: calc(100vh - 166px);
+
+    /* height: calc(100% - 100px); */
+  }
+
+  .pagination {
+    grid-area: pagination;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    background-color: rgb(177, 255, 255);
+        border-radius: 4px;
   }
 }
 </style>

@@ -16,14 +16,17 @@ defineOptions({
 
 <style scoped>
 .layout {
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: 200px 1fr;
   grid-template-rows: 50px 1fr;
-  width: 100%;
-  height: 100%;
   grid-template-areas:
     "header header"
     "side main";
+  overflow: hidden;
+  box-sizing: border-box;
+
   .header {
     grid-area: header;
     height: 50px;
@@ -37,8 +40,10 @@ defineOptions({
   }
   .main {
     grid-area: main;
+    /* height: calc(100% - 50px); */
     height: 100%;
     background-color: #fff;
+    box-sizing: border-box;
   }
 }
 </style>

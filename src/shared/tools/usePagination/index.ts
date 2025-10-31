@@ -13,7 +13,7 @@ const defaultPagination: Pagination = {
 
 export function usePagination(
   pageNumber: number = 1,
-  pageSizes: number[] = [...DEFAULT_PAGE_SIZES],
+  customizePageSizes: number[] = [...DEFAULT_PAGE_SIZES],
   pageSize: number = 20
 ) {
   const pagination = ref<Pagination>({
@@ -22,7 +22,7 @@ export function usePagination(
     pageSize
   });
 
-  let currentPageSizes = [...pageSizes];
+  const pageSizes =  ref([...customizePageSizes]);
 
   function resetPagination() {
     pagination.value = {
@@ -36,11 +36,11 @@ export function usePagination(
     pagination.value.pageNumber = newPage;
   };
 
-  const changePageSize = (newSize: (typeof currentPageSizes)[number]) => {
+  const changePageSize = (newSize: (typeof pageSizes.value)[number]) => {
     // 验证 pageSize 是否在允许的范围内
-    if (!currentPageSizes.includes(newSize)) {
+    if (!pageSizes.value.includes(newSize)) {
       console.warn(
-        `pageSize ${newSize} is not in available sizes: ${currentPageSizes.join(
+        `pageSize ${newSize} is not in available sizes: ${pageSizes.value.join(
           ", "
         )}`
       );
@@ -48,11 +48,6 @@ export function usePagination(
     pagination.value.pageSize = newSize;
   };
 
-  const getPageSizes = () => [...currentPageSizes];
-
-  const setPageSizes = (sizes: number[]) => {
-    currentPageSizes = [...sizes];
-  };
 
   const getPaginatedData = <T extends any>(
     data: T[],
@@ -70,8 +65,8 @@ export function usePagination(
     resetPagination,
     changePageNumber,
     changePageSize,
-    getPageSizes, 
-    setPageSizes,
+    
+    pageSizes,
     
     getPaginatedData
   };
