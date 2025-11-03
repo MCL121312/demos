@@ -53,11 +53,17 @@ export const useUsers = () => {
     // searchUsers(pagination.value);
   };
 
+  // users是无效的
+  const invalidUsers = computed(() => {
+    return users.value.length === 0 || users.value[0] === undefined;
+  });
+
   return {
     users,
 
     loadUsers,
     searchUsers,
+    invalidUsers,
 
     pagination,
     changePageNumber,

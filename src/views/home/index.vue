@@ -12,6 +12,7 @@ const {
   users,
   loadUsers,
   searchUsers,
+  invalidUsers,
   pagination,
   changePageNumber,
   changePageSize,
@@ -55,58 +56,27 @@ const COLUMN_CONFIG = {
   }
 } as const;
 
-const { exportTableWithFields } = useTableExport(COLUMN_CONFIG);
+const {
+  exportAllExportableColumns,
+  exportSelectedColumns,
+  checkedColumns,
+  initCheckedColumns,
+  toggleColumn,
+  canExport
+} = useTableExport(COLUMN_CONFIG);
+
 const { dialog, openDialog, closeDialog } = useDialog("选列导出");
 
-interface CheckedColumn {
-  field: keyof typeof COLUMN_CONFIG;
-  columnsName: string;
-  checked: boolean;
-}
-
-const checkedColumns = ref<CheckedColumn[]>([]);
-
-// 初始化列选择状态
-function initCheckedColumns() {
-  checkedColumns.value = (
-    Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]
-  ).map(key => ({
-    field: key,
-    columnsName: COLUMN_CONFIG[key].label,
-    checked: COLUMN_CONFIG[key].exportable ?? true
-  }));
-}
-
-function showColumnsConfig() {
-  if (users.value.length === 0 || users.value[0] === undefined) return;
+function handleShowColumnsConfig() {
+  if (invalidUsers.value) return;
   initCheckedColumns();
   openDialog();
 }
 
-function changeExportColumn(column: {
-  field: keyof typeof COLUMN_CONFIG;
-  columnsName: string;
-  checked: boolean;
-}) {
-  column.checked = !column.checked;
-}
-
-// 是否能导出，有选中的导出列才能导出
-const canExport = computed(() => {
-  return checkedColumns.value.reduce(
-    (hasChecked, col) => hasChecked || col.checked,
-    false
-  );
-});
-
 // 直接导出所有可导出的列
 async function handleViewColumnsExport() {
   try {
-    const selectedFields = (
-      Object.keys(COLUMN_CONFIG) as (keyof typeof COLUMN_CONFIG)[]
-    ).filter(key => COLUMN_CONFIG[key].exportable !== false);
-
-    await exportTableWithFields(users.value, selectedFields, "用户列表");
+    await exportAllExportableColumns(users.value, "用户列表");
   } catch (error) {
     console.error("导出失败：", error);
     ElMessage.error("导出失败，请稍后重试");
@@ -116,11 +86,7 @@ async function handleViewColumnsExport() {
 // 选列导出
 async function handleSelectColumnsExport() {
   try {
-    const selectedFields = checkedColumns.value
-      .filter(col => col.checked)
-      .map(col => col.field);
-
-    await exportTableWithFields(users.value, selectedFields, "用户列表");
+    await exportSelectedColumns(users.value, "用户列表");
     closeDialog();
   } catch (error) {
     console.error("导出失败：", error);
@@ -147,10 +113,10 @@ onMounted(() => {
     
       </div>
     <div class="header__table-actions">
-        <el-button @click="handleViewColumnsExport" :disabled="users.length == 0">
+        <el-button @click="handleViewColumnsExport" :disabled="invalidUsers">
         导出表格
       </el-button>
-      <el-button @click="showColumnsConfig" :disabled="users.length == 0">
+      <el-button @click="handleShowColumnsConfig" :disabled="invalidUsers">
         选列导出
       </el-button>
     </div>
@@ -174,8 +140,6 @@ onMounted(() => {
       </el-table-column>
     </el-table>
 
-    <!-- </div> -->
-
     <div class="pagination">
       <el-pagination
         v-model:current-page="pagination.pageNumber"
@@ -192,7 +156,7 @@ onMounted(() => {
           v-for="column in checkedColumns"
           :key="column.columnsName"
           :model-value="column.checked"
-          @change="changeExportColumn(column)">
+          @change="toggleColumn(column)">
           {{ column.columnsName }}
         </el-checkbox>
       </div>

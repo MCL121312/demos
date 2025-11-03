@@ -30,9 +30,21 @@
 **返回值：**
 ```ts
 {
-  tableColumnInfo,  // 列名映射表（computed）
-  exportConfig,     // 导出配置（computed）
-  exportTable       // 导出方法
+  // 基础导出方法
+  exportTable,                  // 导出表格（自定义配置）
+  exportTableWithFields,        // 导出指定字段
+
+  // 便捷导出方法
+  exportAllExportableColumns,   // 导出所有可导出的列
+  exportSelectedColumns,        // 导出选中的列
+
+  // 列选择状态管理
+  checkedColumns,               // ref<CheckedColumn[]> 列选择状态
+  initCheckedColumns,           // () => void 初始化列选择
+  toggleColumn,                 // (column) => void 切换列选中状态
+  canExport,                    // computed<boolean> 是否可导出
+  getSelectedFields,            // () => T[] 获取选中的字段
+  getExportableFields           // () => T[] 获取所有可导出字段
 }
 ```
 
@@ -49,10 +61,10 @@ interface ColumnConfig {
 
 ## 使用示例
 
-### 基础用法
+### 基础用法 - 导出所有可导出列
 
 ```ts
-import { useTableExport } from "../../shared/tools/useTableExport";
+import { useTableExport } from "./useTableExport";
 
 // 1. 定义列配置
 const COLUMN_CONFIG = {
@@ -62,31 +74,75 @@ const COLUMN_CONFIG = {
 } as const;
 
 // 2. 使用工具
-const { tableColumnInfo, exportTable } = useTableExport(COLUMN_CONFIG);
+const { exportAllExportableColumns } = useTableExport(COLUMN_CONFIG);
 
-// 3. 导出数据
-function handleExport() {
-  exportTable(users.value, "用户列表");
+// 3. 导出数据（自动过滤掉 exportable: false 的列）
+async function handleExport() {
+  await exportAllExportableColumns(users.value, "用户列表");
 }
 ```
 
-### 在模板中使用列名映射
+### 选列导出功能
 
 ```vue
 <template>
-  <div v-for="column in checkedColumns" :key="column.field">
-    {{ tableColumnInfo[column.field] }}
+  <div>
+    <el-button @click="handleShowColumnsConfig">选列导出</el-button>
+
+    <el-dialog v-model="dialog.visible" title="选择导出列">
+      <div class="dialog-container">
+        <el-checkbox
+          v-for="column in checkedColumns"
+          :key="column.columnsName"
+          :model-value="column.checked"
+          @change="toggleColumn(column)">
+          {{ column.columnsName }}
+        </el-checkbox>
+      </div>
+      <template #footer>
+        <el-button @click="dialog.visible = false">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleSelectColumnsExport"
+          :disabled="!canExport">
+          导出
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-const checkedColumns = computed(() => {
-  return Object.keys(users.value[0] || {}).map(key => ({
-    field: key,
-    columnsName: tableColumnInfo.value[key] || key,
-    checked: true
-  }));
-});
+import { useTableExport } from "./useTableExport";
+import { useDialog } from "../../shared/tools/useDialog";
+
+const COLUMN_CONFIG = {
+  id: { label: "ID", width: 10, exportable: false },
+  name: { label: "姓名", width: 15 },
+  phone: { label: "手机号", width: 15 }
+} as const;
+
+const {
+  exportSelectedColumns,
+  checkedColumns,
+  initCheckedColumns,
+  toggleColumn,
+  canExport
+} = useTableExport(COLUMN_CONFIG);
+
+const { dialog, openDialog } = useDialog("选列导出");
+
+// 打开选列对话框
+function handleShowColumnsConfig() {
+  initCheckedColumns();  // 初始化列选择状态
+  openDialog();
+}
+
+// 导出选中的列
+async function handleSelectColumnsExport() {
+  await exportSelectedColumns(users.value, "用户列表");
+  dialog.value.visible = false;
+}
 </script>
 ```
 
@@ -122,14 +178,16 @@ const { exportTable } = useTableExport(COLUMN_CONFIG);
 exportTable(users.value, "用户列表");
 ```
 
-### 完整示例
+### 完整示例 - 同时支持快速导出和选列导出
 
 ```vue
 <script setup lang="ts">
-import { useTableExport } from "../../shared/tools/useTableExport";
-import { useUsers } from "./users";
+import { ElMessage } from "element-plus";
+import { useTableExport } from "./useTableExport";
+import { useDialog } from "../../shared/tools/useDialog";
+import { useUsers } from "./useUsers";
 
-const { users, loadUsers } = useUsers();
+const { users, loadUsers, invalidUsers } = useUsers();
 
 // 定义列配置
 const COLUMN_CONFIG = {
@@ -140,11 +198,41 @@ const COLUMN_CONFIG = {
 } as const;
 
 // 使用导出工具
-const { tableColumnInfo, exportTable } = useTableExport(COLUMN_CONFIG);
+const {
+  exportAllExportableColumns,
+  exportSelectedColumns,
+  checkedColumns,
+  initCheckedColumns,
+  toggleColumn,
+  canExport
+} = useTableExport(COLUMN_CONFIG);
 
-// 导出处理函数
-function handleExport() {
-  exportTable(users.value, "用户列表");
+const { dialog, openDialog, closeDialog } = useDialog("选列导出");
+
+// 快速导出所有可导出列
+async function handleQuickExport() {
+  try {
+    await exportAllExportableColumns(users.value, "用户列表");
+  } catch (error) {
+    ElMessage.error("导出失败，请稍后重试");
+  }
+}
+
+// 打开选列对话框
+function handleShowColumnsConfig() {
+  if (invalidUsers.value) return;
+  initCheckedColumns();
+  openDialog();
+}
+
+// 导出选中的列
+async function handleSelectColumnsExport() {
+  try {
+    await exportSelectedColumns(users.value, "用户列表");
+    closeDialog();
+  } catch (error) {
+    ElMessage.error("导出失败，请稍后重试");
+  }
 }
 
 onMounted(() => {
@@ -154,12 +242,41 @@ onMounted(() => {
 
 <template>
   <div>
-    <el-button @click="handleExport">导出用户</el-button>
+    <div class="header">
+      <el-button @click="handleQuickExport" :disabled="invalidUsers">
+        快速导出
+      </el-button>
+      <el-button @click="handleShowColumnsConfig" :disabled="invalidUsers">
+        选列导出
+      </el-button>
+    </div>
+
     <el-table :data="users">
-      <el-table-column prop="name" :label="tableColumnInfo.name" />
-      <el-table-column prop="phone" :label="tableColumnInfo.phone" />
-      <el-table-column prop="email" :label="tableColumnInfo.email" />
+      <el-table-column prop="name" label="姓名" />
+      <el-table-column prop="phone" label="手机号" />
+      <el-table-column prop="email" label="邮箱" />
     </el-table>
+
+    <el-dialog v-model="dialog.visible" :title="dialog.title">
+      <div class="dialog-container">
+        <el-checkbox
+          v-for="column in checkedColumns"
+          :key="column.columnsName"
+          :model-value="column.checked"
+          @change="toggleColumn(column)">
+          {{ column.columnsName }}
+        </el-checkbox>
+      </div>
+      <template #footer>
+        <el-button @click="closeDialog">取消</el-button>
+        <el-button
+          type="primary"
+          @click="handleSelectColumnsExport"
+          :disabled="!canExport">
+          导出
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 ```
@@ -198,9 +315,16 @@ const PRODUCT_COLUMNS = {
 所有列相关的配置都集中在 `COLUMN_CONFIG` 中，避免多处维护同样的数据。
 
 ### 职责分离
-- **Vue 文件**: 处理 ViewModel（视图模型）
-- **useTableExport**: 处理配置驱动的导出逻辑
+- **Vue 文件**: 处理 UI 交互和业务逻辑
+- **useTableExport**: 处理导出逻辑和列选择状态管理
 - **useExportExcel**: 处理底层 Excel 生成
+
+### 封装列选择逻辑
+将 `checkedColumns` 相关逻辑封装在 `useTableExport` 中，而不是放在视图层：
+- ✅ **职责更清晰**: 列选择是导出功能的一部分
+- ✅ **复用性更好**: 其他页面可以直接复用选列导出功能
+- ✅ **减少视图层代码**: 视图层只需关注 UI 交互
+- ✅ **更好的类型安全**: 列配置的类型信息在 composable 内部
 
 ### 性能优化
 使用 `reduce` 替代 `filter + map`，一次遍历完成过滤和转换，减少中间数组创建。
