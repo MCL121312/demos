@@ -1,4 +1,4 @@
-import { getUsers } from "../../../network/apis/users";
+import { getUsersApi } from "../../../network/apis/users";
 import { usePagination } from "../../../shared/tools/usePagination";
 // viewModel
 interface User {
@@ -38,19 +38,17 @@ export const useUsers = () => {
     keywordFilterConditions: KeywordFilterConditions={ name: "" }
   ) {
     
-    const { data, total } = await getUsers(paginationFilterConditions, keywordFilterConditions);
+    const { data, total } = await getUsersApi(paginationFilterConditions, keywordFilterConditions);
     users.value = data;
     pagination.value.total = total;
   }
 
   const changePageNumber = (newPage: number) => {
     changePaginationPageNumber(newPage);
-    // searchUsers(pagination.value);
   };
 
   const changePageSize = (newSize: number) => {
     changePaginationPageSize(newSize);
-    // searchUsers(pagination.value);
   };
 
   // users是无效的

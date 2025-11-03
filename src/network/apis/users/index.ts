@@ -136,7 +136,7 @@ const mockUsers: User[] = [
   }
 ];
 
-export const getUsers = async (
+export const getUsersApi = async (
   { pageNumber, pageSize }: { pageNumber: number; pageSize: number },
   filters: { name?: string }
 ): Promise<{
