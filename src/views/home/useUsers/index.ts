@@ -18,7 +18,7 @@ export const useUsers = () => {
     changePageNumber: changePaginationPageNumber,
     changePageSize: changePaginationPageSize,
     pageSizes
-  } = usePagination();
+  } = usePagination(1,[10,20,50,1000],1000);
 
   // 重置搜索条件 并搜索
   async function loadUsers() {
